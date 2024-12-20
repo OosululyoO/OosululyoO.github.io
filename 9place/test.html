@@ -2,7 +2,7 @@
 <html lang="zh-tw">
 <head>
     <meta charset="UTF-8">
-    <title>九宮快速計算測試版</title>
+    <title>計算筆畫</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -223,25 +223,26 @@
 
         function calculateRocYearSum(year) {
         const rocYear = year - 1911;
-        let sum = 0;
-        let number = rocYear;
+        let num = rocYear;
 
-        while (number > 0) {
-            sum += number % 10;
-            number = Math.floor(number / 10);
-        }
+        while (num >= 10) {
+        num = num.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+    }
 
-    return sum;
+    return num;
 }
         
         function calculateOtherValues(last_name_strokes, first_name_stroke1, first_name_stroke2) {
             const year = parseInt(document.getElementById('year').value);
+            const born_year = parseInt(document.getElementById('born_year').value);
+
 
             // 創建陣列
             const housearray = ['名', '財', '官', '利', '交', '敗', '衰', '煞', '絕'];
 
             // 計算民國年合併數
             const combinedYear = calculateRocYearSum(year);
+            const born_combinedYear = calculateRocYearSum(born_year);
 
 
             // 計算表格中的值
@@ -250,11 +251,6 @@
             let child_home = (first_name_stroke1 + first_name_stroke2) % 9;
             let life_house = (last_name_strokes + first_name_stroke1 + first_name_stroke2) % 9;
             let run_house = (first_name_stroke2 + 1) % 9;
-
-            // 如果值大於9，則減去9
-            parents_home = parents_home > 9 ? parents_home - 9 : parents_home;
-            me_home = me_home > 9 ? me_home - 9 : me_home;
-            child_home = child_home > 9 ? child_home - 9 : child_home;
 
             // 確保索引在0到8之間
             parents_home = (parents_home + 9) % 9;
@@ -269,14 +265,18 @@
             var H = homeArray[child_home].indexOf(combinedYear)+1;
             var L = homeArray[life_house].indexOf(combinedYear)+1;
 
-
-            // 顯示結果
+            // 使用 homeArray 計算 resultF
+            var born_F = homeArray[parents_home].indexOf(born_combinedYear)+1;
+            var born_G = homeArray[me_home].indexOf(born_combinedYear)+1;
+            var born_H = homeArray[child_home].indexOf(born_combinedYear)+1;
+            var born_L = homeArray[life_house].indexOf(born_combinedYear)+1;
         
         document.getElementById('result').innerHTML = `
               
                 <table border="1">
                     <tr>
                         <th></th>
+                        <th>${born_year}</th>
                         <th>${year - 2}</th>
                         <th>${year - 1}</th>
                         <th>${year}</th>
@@ -285,6 +285,7 @@
                     </tr>
                     <tr>
                         <td>父母宮</td>
+                        <td>${housearray[(born_F)%9] || ''}</td>
                         <td>${housearray[(F-2)%9] || ''}</td>
                         <td>${housearray[(F-1)%9] || ''}</td>
                         <td>${housearray[F%9] || ''}</td>
@@ -293,6 +294,7 @@
                     </tr>
                     <tr>
                         <td>疾厄宮</td>
+                        <td>${housearray[(born_G)%9] || ''}</td>
                         <td>${housearray[(G-2)%9] || ''}</td>
                         <td>${housearray[(G-1)%9] || ''}</td>
                         <td>${housearray[G%9] || ''}</td>
@@ -301,6 +303,7 @@
                     </tr>
                     <tr>
                         <td>子女宮</td>
+                        <td>${housearray[(born_H)%9] || ''}</td>
                         <td>${housearray[(H-2)%9] || ''}</td>
                         <td>${housearray[(H-1)%9] || ''}</td>
                         <td>${housearray[H%9] || ''}</td>
@@ -309,6 +312,7 @@
                     </tr>
                     <tr>
                         <td>命宮</td>
+                        <td>${housearray[(born_L)%9] || ''}</td>
                         <td>${housearray[(L-2)%9] || ''}</td>
                         <td>${housearray[(L-1)%9] || ''}</td>
                         <td>${housearray[L%9] || ''}</td>
@@ -317,7 +321,7 @@
                     </tr>
                     <tr>
                         <td>遷移宮</td>
-                        <td colspan="5">${run_house|| ''}</td>
+                        <td colspan="6">${run_house|| ''}</td>
                     </tr>
                 </table>
              
