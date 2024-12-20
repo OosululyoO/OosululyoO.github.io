@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <title>計算筆畫</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            border: 1px solid #ccc;
+        }
+
+        .box {
+            position: absolute;
+            border: 1px solid #000;
+            text-align: center;
+            line-height: 30px;
+            overflow: hidden;
+        }
+
+        .box-label {
+            display: inline-block;
+            width: 100px;
+            position: absolute;
+            text-align: center;
+            line-height: 30px;
+        }
+
+        .rounded {
+            border-radius: 5px;
+        }
+
+        input[type="text"] {
+            position: absolute;
+            border: 1px solid #000;
+            text-align: center;
+            line-height: 30px;
+            border-radius: 5px;
+        }
+
+        #year {
+            left: 130px;
+            top: 80px;
+            width: 90px;
+            height: 30px;
+        }
+
+        #month {
+            left: 260px;
+            top: 80px;
+            width: 90px;
+            height: 30px;
+        }
+
+        #year-label {
+            left: 70px;
+            top: 80px;
+            width: 60px;
+            height: 30px;
+        }
+
+        #month-label {
+            left: 210px;
+            top: 80px;
+            width: 60px;
+            height: 30px;
+        }
+
+        #born_year {
+            left: 130px;
+            top: 40px;
+            width: 90px;
+            height: 30px;
+        }
+
+        #born_month {
+            left: 260px;
+            top: 40px;
+            width: 90px;
+            height: 30px;
+        }
+
+        #born_year-label {
+            left: 50px;
+            top: 40px;
+            width: 80px;
+            height: 30px;
+        }
+
+        #born_month-label {
+            left: 210px;
+            top: 40px;
+            width: 60px;
+            height: 30px;
+        }
+
+        #last_name {
+            left: 130px;
+            top: 120px;
+            width: 90px;
+            height: 40px;
+        }
+
+        #first_name {
+            left: 260px;
+            top: 120px;
+            width: 90px;
+            height: 40px;
+        }
+
+        #last_name-label {
+            left: 70px;
+            top: 130px;
+            width: 60px;
+            height: 30px;
+        }
+
+        #first_name-label {
+            left: 210px;
+            top: 125px;
+            width: 60px;
+            height: 30px;
+        }
+
+        #last_name_strokes, #first_name_stroke1, #first_name_stroke2 {
+            left: 130px;
+            top: 170px;
+            width: 40px;
+            height: 40px;
+        }
+
+        #first_name_stroke1 {
+            left: 180px;
+        }
+
+        #first_name_stroke2 {
+            left: 230px;
+        }
+
+        #calculate_button {
+            left: 280px;
+            top: 170px;
+            width: 80px;
+            height: 40px;
+        }
+
+        table {
+            position: absolute;
+            top: 230px;
+            left: 130px;
+            width: 500px;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+            text-align: center;
+            padding: 5px;
+        }
+    </style>
+    <script>
+
+        async function calculateStrokes() {
+            try {
+                const lastName = document.getElementById('last_name').value.trim();
+                const firstName = document.getElementById('first_name').value.trim();
+
+                if (!lastName || !firstName) {
+                    alert('請輸入姓和名！');
+                    return;
+                }
+
+                // Fetch the CSV file
+                const response = await fetch('dir.csv');
+                if (!response.ok) {
+                    alert('無法讀取 dir.csv 檔案，請確認檔案是否存在。');
+                    return;
+                }
+                const text = await response.text();
+
+                // Parse the CSV data
+                const rows = text.split('\n').slice(1);
+                const strokesMap = {};
+                rows.forEach(row => {
+                    const [codePoint, value, character, strokes] = row.split(',').map(cell => cell?.trim());
+                    if (character && strokes) {
+                        strokesMap[character] = parseInt(strokes, 10);
+                    }
+                });
+
+                // Calculate strokes
+                const lastNameStrokes = strokesMap[lastName] || 0;
+                const firstNameStroke1 = strokesMap[firstName.charAt(0)] || 0;
+                const firstNameStroke2 = firstName.length > 1 ? (strokesMap[firstName.charAt(1)] || 0) : 0;
+
+                // Update the DOM
+                document.getElementById('last_name_strokes').value = lastNameStrokes;
+                document.getElementById('first_name_stroke1').value = firstNameStroke1;
+                document.getElementById('first_name_stroke2').value = firstNameStroke2;
+
+                // 繼續計算其他值
+                calculateOtherValues(lastNameStrokes, firstNameStroke1, firstNameStroke2);
+            } catch (error) {
+                console.error('錯誤發生：', error);
+                alert('計算過程中發生錯誤，請檢查輸入或檔案格式。');
+            }
+        }
+
+        // 建立9x9陣列
+        const homeArray = [];
+        for (let i = 0; i < 9; i++) {
+            homeArray[i] = [];
+            for (let j = 0; j < 9; j++) {
+                homeArray[i][j] = (i + j) % 9 + 1;
+            }
+        }
+
+        function calculateRocYearSum(year) {
+        const rocYear = year - 1911;
+        let sum = 0;
+        let number = rocYear;
+
+        while (number > 0) {
+            sum += number % 10;
+            number = Math.floor(number / 10);
+        }
+
+    return sum;
+}
+        
+        function calculateOtherValues(last_name_strokes, first_name_stroke1, first_name_stroke2) {
+            const year = parseInt(document.getElementById('year').value);
+
+            // 創建陣列
+            const housearray = ['名', '財', '官', '利', '交', '敗', '衰', '煞', '絕'];
+
+            // 計算民國年合併數
+            const combinedYear = calculateRocYearSum(year);
+
+
+            // 計算表格中的值
+            let parents_home = (last_name_strokes + 1) % 9;
+            let me_home = (last_name_strokes + first_name_stroke1) % 9;
+            let child_home = (first_name_stroke1 + first_name_stroke2) % 9;
+            let life_house = (last_name_strokes + first_name_stroke1 + first_name_stroke2) % 9;
+            let run_house = (first_name_stroke2 + 1) % 9;
+
+            // 如果值大於9，則減去9
+            parents_home = parents_home > 9 ? parents_home - 9 : parents_home;
+            me_home = me_home > 9 ? me_home - 9 : me_home;
+            child_home = child_home > 9 ? child_home - 9 : child_home;
+
+            // 確保索引在0到8之間
+            parents_home = (parents_home + 9) % 9;
+            me_home = (me_home + 9) % 9;
+            child_home = (child_home + 9) % 9;
+            life_house = (life_house + 9) % 9;
+            run_house = (run_house + 9) % 9;
+
+            // 使用 homeArray 計算 resultF
+            var F = homeArray[parents_home].indexOf(combinedYear)+1;
+            var G = homeArray[me_home].indexOf(combinedYear)+1;
+            var H = homeArray[child_home].indexOf(combinedYear)+1;
+            var L = homeArray[life_house].indexOf(combinedYear)+1;
+
+
+            // 顯示結果
+        
+        document.getElementById('result').innerHTML = `
+              
+                <table border="1">
+                    <tr>
+                        <th></th>
+                        <th>${year - 2}</th>
+                        <th>${year - 1}</th>
+                        <th>${year}</th>
+                        <th>${year + 1}</th>
+                        <th>${year + 2}</th>
+                    </tr>
+                    <tr>
+                        <td>父母宮</td>
+                        <td>${housearray[(F-2)%9] || ''}</td>
+                        <td>${housearray[(F-1)%9] || ''}</td>
+                        <td>${housearray[F%9] || ''}</td>
+                        <td>${housearray[(F+1)%9] || ''}</td>
+                        <td>${housearray[(F+2)%9] || ''}</td>
+                    </tr>
+                    <tr>
+                        <td>疾厄宮</td>
+                        <td>${housearray[(G-2)%9] || ''}</td>
+                        <td>${housearray[(G-1)%9] || ''}</td>
+                        <td>${housearray[G%9] || ''}</td>
+                        <td>${housearray[(G+1)%9] || ''}</td>
+                        <td>${housearray[(G+2)%9] || ''}</td>
+                    </tr>
+                    <tr>
+                        <td>子女宮</td>
+                        <td>${housearray[(H-2)%9] || ''}</td>
+                        <td>${housearray[(H-1)%9] || ''}</td>
+                        <td>${housearray[H%9] || ''}</td>
+                        <td>${housearray[(H+1)%9] || ''}</td>
+                        <td>${housearray[(H+2)%9] || ''}</td>
+                    </tr>
+                    <tr>
+                        <td>命宮</td>
+                        <td>${housearray[(L-2)%9] || ''}</td>
+                        <td>${housearray[(L-1)%9] || ''}</td>
+                        <td>${housearray[L%9] || ''}</td>
+                        <td>${housearray[(L+1)%9] || ''}</td>
+                        <td>${housearray[(L+2)%9] || ''}</td>
+                    </tr>
+                    <tr>
+                        <td>遷移宮</td>
+                        <td colspan="5">${run_house|| ''}</td>
+                    </tr>
+                </table>
+             
+            `;
+        }
+
+
+    </script>
+</head>
+<body>
+    <div id="array-container"></div>
+    <div id="array-result"></div>
+    <div class="container">
+        <input id="year" type="text" name="year" placeholder="year">
+        <input id="month" type="text" name="month" placeholder="month">
+        <div id="year-label" class="box-label">西元年</div>
+        <div id="month-label" class="box-label">月</div>
+        <input id="born_year" type="text" name="born_year" placeholder="born_year">
+        <input id="born_month" type="text" name="born_month" placeholder="born_month">
+        <div id="born_year-label" class="box-label">出生西元年</div>
+        <div id="born_month-label" class="box-label">出生月</div>
+        <input id="last_name" type="text" name="Last_name" placeholder="Last_name">
+        <input id="first_name" type="text" name="first_name" placeholder="first_name">
+        <div id="last_name-label" class="box-label">姓</div>
+        <div id="first_name-label" class="box-label">名</div>
+
+        <input id="last_name_strokes" type="text" readonly placeholder="筆畫">
+        <input id="first_name_stroke1" type="text" readonly placeholder="筆畫">
+        <input id="first_name_stroke2" type="text" readonly placeholder="筆畫">
+
+        <button id="calculate_button" class="box" onclick="calculateStrokes()">計算</button>
+
+        <div id="result"></div>
+        <div id="test_result"></div>
+
+    </div>
+</body>
+</html>
