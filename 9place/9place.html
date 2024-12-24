@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>筆畫計算與宮位分析</title>
+    <style>
+        body {
+            font-family: 'Ubuntu', sans-serif;
+            background: linear-gradient(141deg, #0fb8ad 0%, #1fc8db 51%, #2cb5e8 75%);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            position: relative;
+            width: 600px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            background: #2a334c;
+            border-radius: 10px;
+            box-shadow: -1px 7px 25px 0px rgba(0, 0, 0, 0.75);
+        }
+
+        .box-label {
+            display: inline-block;
+            width: 120px;
+            text-align: right;
+            line-height: 30px;
+            color: wheat;
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            line-height: 30px;
+            border-radius: 5px;
+            width: 150px;
+            height: 30px;
+            background-color: #2a334c;
+            color: white;
+            font-size: 14px;
+            border: none;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+            padding-left: 10px;
+        }
+
+        input[type="text"]:focus {
+            outline: 2px solid #27c93f;
+        }
+
+        button {
+            background-color: #2a334c;
+            color: wheat;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+        }
+
+        button:hover {
+            background-color: #27c93f;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #2a334c;
+            color: white;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid white;
+            text-align: center;
+            padding: 5px;
+        }
+
+        th {
+            background-color: #27c93f;
+            color: white;
+        }
+
+        td {
+            background-color: #282a36;
+        }
+
+        .error {
+            color: red;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .toggle-group {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .toggle-group label {
+            margin: 0 10px;
+            color: wheat;
+            font-weight: bold;
+        }
+    </style>
+    <script>
+        let useStrokeInput = false;
+
+        function toggleInputMethod() {
+            useStrokeInput = document.getElementById('toggle_stroke').checked;
+            document.getElementById('name_input_group').style.display = useStrokeInput ? 'none' : 'block';
+            document.getElementById('stroke_input_group').style.display = useStrokeInput ? 'block' : 'none';
+        }
+
+        async function calculateStrokes() {
+            try {
+                let lastNameStrokes = useStrokeInput ? parseInt(document.getElementById('last_name_strokes').value) : 0;
+                let firstNameStroke1 = useStrokeInput ? parseInt(document.getElementById('first_name_stroke1').value) : 0;
+                let firstNameStroke2 = useStrokeInput ? parseInt(document.getElementById('first_name_stroke2').value) : 0;
+
+                if (!useStrokeInput) {
+                    const lastName = document.getElementById('last_name').value.trim();
+                    const firstName = document.getElementById('first_name').value.trim();
+
+                    if (!lastName || !firstName) {
+                        alert('請輸入姓名或選擇筆畫模式輸入筆畫！');
+                        return;
+                    }
+
+                    const response = await fetch('dir.csv');
+                    if (!response.ok) {
+                        alert('無法讀取 dir.csv 檔案，請確認檔案是否存在。');
+                        return;
+                    }
+                    const text = await response.text();
+
+                    const rows = text.split('\n').slice(1);
+                    const strokesMap = {};
+                    rows.forEach(row => {
+                        const [codePoint, value, character, strokes] = row.split(',').map(cell => cell?.trim());
+                        if (character && strokes) {
+                            strokesMap[character] = parseInt(strokes, 10);
+                        }
+                    });
+
+                    lastNameStrokes = strokesMap[lastName] || 0;
+                    firstNameStroke1 = strokesMap[firstName.charAt(0)] || 0;
+                    firstNameStroke2 = firstName.length > 1 ? (strokesMap[firstName.charAt(1)] || 0) : 0;
+                }
+
+                // Get input values
+                const year = parseInt(document.getElementById('year').value);
+                const bornYear = parseInt(document.getElementById('born_year').value);
+
+                if (isNaN(year) || isNaN(bornYear)) {
+                    alert('請輸入有效的年份！');
+                    return;
+                }
+
+                calculateOtherValues(lastNameStrokes, firstNameStroke1, firstNameStroke2, year, bornYear);
+            } catch (error) {
+                console.error('錯誤發生：', error);
+                alert('計算過程中發生錯誤，請檢查輸入或檔案格式。');
+            }
+        }
+
+        function calculateRocYearSum(year) {
+            const rocYear = year - 1911;
+            let num = rocYear;
+
+            while (num >= 10) {
+                num = num.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+            }
+
+            return num;
+        }
+
+        // 建立9x9陣列
+        const homeArray = [];
+        for (let i = 0; i < 9; i++) {
+            homeArray[i] = [];
+            for (let j = 0; j < 9; j++) {
+                homeArray[i][j] = (i + j) % 9 + 1;
+            }
+        }
+        
+        function calculateOtherValues(lastNameStrokes, firstNameStroke1, firstNameStroke2, year, bornYear) {
+            const houseArray = ['名', '財', '官', '利', '交', '敗', '衰', '煞', '絕'];
+            const combinedYear = calculateRocYearSum(year);
+            const bornCombinedYear = calculateRocYearSum(bornYear);
+            
+            // 計算表格中的值
+            let parentsHome = (lastNameStrokes + 1) % 9;
+            let meHome = (lastNameStrokes + firstNameStroke1) % 9;
+            let childHome = (firstNameStroke1 + firstNameStroke2) % 9;
+            let lifeHouse = (lastNameStrokes + firstNameStroke1 + firstNameStroke2) % 9;
+            let runHouse = (firstNameStroke2 + 1) % 9;
+
+            // 確保索引在0到8之間
+            parentsHome = (parentsHome + 9) % 9;
+            meHome = (meHome + 9) % 9;
+            childHome = (childHome + 9) % 9;
+            lifeHouse = (lifeHouse + 9) % 9;
+            runHouse = (runHouse + 9) % 9;
+
+            // 使用 homeArray 計算 resultF
+            var F = homeArray[parentsHome].indexOf(combinedYear) + 1;
+            var G = homeArray[meHome].indexOf(combinedYear) + 1;
+            var H = homeArray[childHome].indexOf(combinedYear) + 1;
+            var L = homeArray[lifeHouse].indexOf(combinedYear) + 1;
+
+            // 使用 homeArray 計算 resultF
+            var bornF = homeArray[parentsHome].indexOf(bornCombinedYear) + 1;
+            var bornG = homeArray[meHome].indexOf(bornCombinedYear) + 1;
+            var bornH = homeArray[childHome].indexOf(bornCombinedYear) + 1;
+            var bornL = homeArray[lifeHouse].indexOf(bornCombinedYear) + 1;
+      
+            // 生成表格結果
+            const resultHTML = `<table>
+                <tr>
+                    <th></th>
+                    <th>${bornYear}</th>
+                    <th>${year - 2}</th>
+                    <th>${year - 1}</th>
+                    <th>${year}</th>
+                    <th>${year + 1}</th>
+                    <th>${year + 2}</th>
+                </tr>
+                <tr>
+                    <td>父母宮</td>
+                    <td>${houseArray[(bornF) % 9] || ''}</td>
+                    <td>${houseArray[(F - 2 + 9) % 9] || ''}</td>
+                    <td>${houseArray[(F - 1 + 9) % 9] || ''}</td>
+                    <td>${houseArray[F % 9] || ''}</td>
+                    <td>${houseArray[(F + 1) % 9] || ''}</td>
+                    <td>${houseArray[(F + 2) % 9] || ''}</td>
+                </tr>
+                <tr>
+                    <td>疾厄宮</td>
+                    <td>${houseArray[(bornG) % 9] || ''}</td>
+                    <td>${houseArray[(G - 2 + 9) % 9] || ''}</td>
+                    <td>${houseArray[(G - 1 + 9) % 9] || ''}</td>
+                    <td>${houseArray[G % 9] || ''}</td>
+                    <td>${houseArray[(G + 1) % 9] || ''}</td>
+                    <td>${houseArray[(G + 2) % 9] || ''}</td>
+                </tr>
+                <tr>
+                    <td>子女宮</td>
+                    <td>${houseArray[(bornH) % 9] || ''}</td>
+                    <td>${houseArray[(H - 2 + 9) % 9] || ''}</td>
+                    <td>${houseArray[(H - 1 + 9) % 9] || ''}</td>
+                    <td>${houseArray[H % 9] || ''}</td>
+                    <td>${houseArray[(H + 1) % 9] || ''}</td>
+                    <td>${houseArray[(H + 2) % 9] || ''}</td>
+                </tr>
+                <tr>
+                    <td>命宮</td>
+                    <td>${houseArray[(bornL) % 9] || ''}</td>
+                    <td>${houseArray[(L - 2 + 9) % 9] || ''}</td>
+                    <td>${houseArray[(L - 1 + 9) % 9] || ''}</td>
+                    <td>${houseArray[L % 9] || ''}</td>
+                    <td>${houseArray[(L + 1) % 9] || ''}</td>
+                    <td>${houseArray[(L + 2) % 9] || ''}</td>
+                </tr>
+                <tr>
+                    <td>遷移宮</td>
+                    <td colspan="6">${houseArray[runHouse]}</td>
+                </tr>
+            </table>`;
+
+            document.getElementById('result').innerHTML = resultHTML;
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="toggle-group">
+            <label>
+                <input type="radio" name="input_method" id="toggle_name" onclick="toggleInputMethod()" checked>
+                使用姓名輸入
+            </label>
+            <label>
+                <input type="radio" name="input_method" id="toggle_stroke" onclick="toggleInputMethod()">
+                使用筆畫輸入
+            </label>
+        </div>
+        <div id="name_input_group">
+            <div class="input-group">
+                <label for="last_name" class="box-label">姓氏：</label>
+                <input id="last_name" type="text" name="Last_name" placeholder="姓氏">
+            </div>
+            <div class="input-group">
+                <label for="first_name" class="box-label">名字：</label>
+                <input id="first_name" type="text" name="first_name" placeholder="名字">
+            </div>
+        </div>
+        <div id="stroke_input_group" style="display: none;">
+            <div class="input-group">
+                <label for="last_name_strokes" class="box-label">姓筆畫：</label>
+                <input id="last_name_strokes" type="text">
+            </div>
+            <div class="input-group">
+                <label for="first_name_stroke1" class="box-label">名筆畫1：</label>
+                <input id="first_name_stroke1" type="text">
+            </div>
+            <div class="input-group">
+                <label for="first_name_stroke2" class="box-label">名筆畫2：</label>
+                <input id="first_name_stroke2" type="text">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="born_year" class="box-label">出生年份：</label>
+            <input id="born_year" type="text" placeholder="出生年份">
+        </div>
+        <div class="input-group">
+            <label for="year" class="box-label">計算年份：</label>
+            <input id="year" type="text" placeholder="計算年份">
+        </div>
+        <button onclick="calculateStrokes()">計算</button>
+        <div id="result"></div>
+    </div>
+</body>
+</html>
